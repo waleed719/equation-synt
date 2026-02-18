@@ -1,5 +1,5 @@
 // ============================================================
-// fractal.js — Mandelbrot & Julia Set Renderers
+// fractal.js — Fractal Renderers with Custom Equation Parameters
 // ============================================================
 
 class FractalMode {
@@ -11,6 +11,13 @@ class FractalMode {
         this.maxIterations = 200;
         this.juliaC = { re: -0.7, im: 0.27015 };
         this.colorScheme = 'fire';
+
+        // === Custom Equation Parameters ===
+        this.power = 2;              // z^n + c — default is classic z²
+        this.formula = 'standard';   // 'standard' | 'burningShip' | 'tricorn' | 'celtic' | 'buffalo'
+        this.bailout = 4;            // escape radius squared
+        this.perturbRe = 0;          // additive perturbation to real part
+        this.perturbIm = 0;          // additive perturbation to imaginary part
 
         // View bounds
         this.viewX = -2.5;
@@ -25,6 +32,93 @@ class FractalMode {
 
         this.setupInteraction();
     }
+
+    // --- Fractal Formula Definitions ---
+    // Each formula defines how z_{n+1} is computed from z_n and c
+    static FORMULAS = {
+        standard: {
+            name: '🔢 Standard (z^n + c)',
+            description: 'Classic Mandelbrot/Julia: z → z^n + c',
+            iterate: (zr, zi, cr, ci, power) => {
+                // General z^n using polar form
+                if (power === 2) {
+                    return { re: zr * zr - zi * zi + cr, im: 2 * zr * zi + ci };
+                }
+                const r = Math.sqrt(zr * zr + zi * zi);
+                const theta = Math.atan2(zi, zr);
+                const rn = Math.pow(r, power);
+                const an = theta * power;
+                return { re: rn * Math.cos(an) + cr, im: rn * Math.sin(an) + ci };
+            }
+        },
+        burningShip: {
+            name: '🔥 Burning Ship',
+            description: 'z → (|Re(z)| + i|Im(z)|)^n + c',
+            iterate: (zr, zi, cr, ci, power) => {
+                zr = Math.abs(zr);
+                zi = Math.abs(zi);
+                if (power === 2) {
+                    return { re: zr * zr - zi * zi + cr, im: 2 * zr * zi + ci };
+                }
+                const r = Math.sqrt(zr * zr + zi * zi);
+                const theta = Math.atan2(zi, zr);
+                const rn = Math.pow(r, power);
+                const an = theta * power;
+                return { re: rn * Math.cos(an) + cr, im: rn * Math.sin(an) + ci };
+            }
+        },
+        tricorn: {
+            name: '🦄 Tricorn (Mandelbar)',
+            description: 'z → conj(z)^n + c',
+            iterate: (zr, zi, cr, ci, power) => {
+                zi = -zi; // conjugate
+                if (power === 2) {
+                    return { re: zr * zr - zi * zi + cr, im: 2 * zr * zi + ci };
+                }
+                const r = Math.sqrt(zr * zr + zi * zi);
+                const theta = Math.atan2(zi, zr);
+                const rn = Math.pow(r, power);
+                const an = theta * power;
+                return { re: rn * Math.cos(an) + cr, im: rn * Math.sin(an) + ci };
+            }
+        },
+        celtic: {
+            name: '☘️ Celtic',
+            description: 'z → (|Re(z²)| - Im(z²)) + c',
+            iterate: (zr, zi, cr, ci, power) => {
+                if (power === 2) {
+                    const reNew = Math.abs(zr * zr - zi * zi) + cr;
+                    const imNew = 2 * zr * zi + ci;
+                    return { re: reNew, im: imNew };
+                }
+                const r = Math.sqrt(zr * zr + zi * zi);
+                const theta = Math.atan2(zi, zr);
+                const rn = Math.pow(r, power);
+                const an = theta * power;
+                return { re: Math.abs(rn * Math.cos(an)) + cr, im: rn * Math.sin(an) + ci };
+            }
+        },
+        buffalo: {
+            name: '🦬 Buffalo',
+            description: 'z → |Re(z²)| - |Im(z²)| + c',
+            iterate: (zr, zi, cr, ci, power) => {
+                if (power === 2) {
+                    return {
+                        re: Math.abs(zr * zr - zi * zi) + cr,
+                        im: -Math.abs(2 * zr * zi) + ci
+                    };
+                }
+                const r = Math.sqrt(zr * zr + zi * zi);
+                const theta = Math.atan2(zi, zr);
+                const rn = Math.pow(r, power);
+                const an = theta * power;
+                return {
+                    re: Math.abs(rn * Math.cos(an)) + cr,
+                    im: -Math.abs(rn * Math.sin(an)) + ci
+                };
+            }
+        }
+    };
 
     // --- Color Palette Functions ---
     static COLOR_SCHEMES = {
@@ -72,27 +166,27 @@ class FractalMode {
         }
     };
 
-    // --- Mandelbrot iteration ---
-    // z_{n+1} = z_n² + c
-    // For Mandelbrot: z₀ = 0, c = pixel coordinate
-    // For Julia: z₀ = pixel coordinate, c = constant
+    // --- General iteration with formula selection ---
     iterate(zr, zi, cr, ci) {
         let iter = 0;
-        let zr2 = zr * zr;
-        let zi2 = zi * zi;
+        const formulaFn = FractalMode.FORMULAS[this.formula]?.iterate
+            || FractalMode.FORMULAS.standard.iterate;
 
-        while (zr2 + zi2 <= 4 && iter < this.maxIterations) {
-            zi = 2 * zr * zi + ci;
-            zr = zr2 - zi2 + cr;
-            zr2 = zr * zr;
-            zi2 = zi * zi;
+        // Apply perturbation
+        cr += this.perturbRe;
+        ci += this.perturbIm;
+
+        while (zr * zr + zi * zi <= this.bailout && iter < this.maxIterations) {
+            const result = formulaFn(zr, zi, cr, ci, this.power);
+            zr = result.re;
+            zi = result.im;
             iter++;
         }
 
         // Smooth coloring
         if (iter < this.maxIterations) {
-            const log_zn = Math.log(zr2 + zi2) / 2;
-            const nu = Math.log(log_zn / Math.log(2)) / Math.log(2);
+            const log_zn = Math.log(zr * zr + zi * zi) / 2;
+            const nu = Math.log(log_zn / Math.log(this.power)) / Math.log(this.power);
             iter = iter + 1 - nu;
         }
 
@@ -110,7 +204,6 @@ class FractalMode {
 
         for (let py = 0; py < H; py++) {
             for (let px = 0; px < W; px++) {
-                // Map pixel to complex plane
                 const x0 = this.viewX + (px / W) * this.viewW;
                 const y0 = this.viewY + (py / H) * this.viewH;
 
@@ -124,13 +217,12 @@ class FractalMode {
                 const idx = (py * W + px) * 4;
 
                 if (iter >= this.maxIterations) {
-                    // Inside the set = black
                     data[idx] = 0;
                     data[idx + 1] = 0;
                     data[idx + 2] = 0;
                 } else {
                     const t = iter / this.maxIterations;
-                    const smoothT = Math.sqrt(t); // Smoother falloff
+                    const smoothT = Math.sqrt(t);
                     const [r, g, b] = colorFunc(smoothT);
                     data[idx] = r;
                     data[idx + 1] = g;
@@ -195,16 +287,17 @@ class FractalMode {
     drawInfo() {
         const ctx = this.ctx;
         ctx.fillStyle = 'rgba(0,0,0,0.6)';
-        ctx.fillRect(10, this.canvas.height - 50, 350, 40);
+        ctx.fillRect(10, this.canvas.height - 55, 420, 45);
         ctx.fillStyle = 'rgba(255,255,255,0.7)';
-        ctx.font = '12px "JetBrains Mono", monospace';
+        ctx.font = '11px "JetBrains Mono", monospace';
 
         const type = this.fractalType === 'mandelbrot' ? 'Mandelbrot' : 'Julia';
-        let info = `${type} | Iterations: ${this.maxIterations} | Zoom: ${(3.5 / this.viewW).toFixed(1)}x`;
+        const formulaName = FractalMode.FORMULAS[this.formula]?.name.replace(/[^\w\s()^+]/g, '').trim() || 'Standard';
+        let info = `${type} | ${formulaName} | n=${this.power} | Iter: ${this.maxIterations} | Zoom: ${(3.5 / this.viewW).toFixed(1)}x`;
         if (this.fractalType === 'julia') {
             info += ` | c = ${this.juliaC.re.toFixed(3)} + ${this.juliaC.im.toFixed(3)}i`;
         }
-        ctx.fillText(info, 20, this.canvas.height - 25);
+        ctx.fillText(info, 20, this.canvas.height - 28);
     }
 
     // --- Interaction ---
@@ -281,6 +374,27 @@ class FractalMode {
         this.renderProgressive();
     }
 
+    setPower(n) {
+        this.power = n;
+        this.renderProgressive();
+    }
+
+    setFormula(formula) {
+        this.formula = formula;
+        this.renderProgressive();
+    }
+
+    setBailout(val) {
+        this.bailout = val;
+        this.renderProgressive();
+    }
+
+    setPerturbation(re, im) {
+        this.perturbRe = re;
+        this.perturbIm = im;
+        this.renderProgressive();
+    }
+
     resetView() {
         if (this.fractalType === 'mandelbrot') {
             this.viewX = -2.5; this.viewY = -1.5;
@@ -292,8 +406,26 @@ class FractalMode {
         this.renderProgressive();
     }
 
+    // Get current state for saving
+    getState() {
+        return {
+            fractalType: this.fractalType,
+            maxIterations: this.maxIterations,
+            juliaC: { ...this.juliaC },
+            colorScheme: this.colorScheme,
+            power: this.power,
+            formula: this.formula,
+            bailout: this.bailout,
+            perturbRe: this.perturbRe,
+            perturbIm: this.perturbIm,
+            viewX: this.viewX,
+            viewY: this.viewY,
+            viewW: this.viewW,
+            viewH: this.viewH
+        };
+    }
+
     destroy() {
-        // Remove event listeners would require storing references...
-        // For now, canvas replacement handles cleanup
+        // Canvas replacement handles cleanup
     }
 }

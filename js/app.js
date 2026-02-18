@@ -170,8 +170,32 @@ class App {
             driftAngleLabel.textContent = val.toFixed(2);
         });
 
+        // Freehand draw button
+        const freehandBtn = document.getElementById('fourierFreehandBtn');
+        let freehandActive = false;
+        freehandBtn.addEventListener('click', () => {
+            if (!freehandActive) {
+                mode.enableFreehandDraw();
+                freehandBtn.textContent = '❌ Cancel Drawing';
+                freehandBtn.classList.add('btn-stop');
+                freehandActive = true;
+            } else {
+                mode.disableFreehandDraw();
+                freehandBtn.textContent = '✏️ Freehand Draw';
+                freehandBtn.classList.remove('btn-stop');
+                freehandActive = false;
+                mode.loadPreset(mode.currentPreset);
+            }
+        });
+
         // Play button
         document.getElementById('fourierPlay').addEventListener('click', () => {
+            if (freehandActive) {
+                mode.disableFreehandDraw();
+                freehandBtn.textContent = '✏️ Freehand Draw';
+                freehandBtn.classList.remove('btn-stop');
+                freehandActive = false;
+            }
             mode.startAnimation();
         });
 
@@ -182,6 +206,12 @@ class App {
 
         // Reset button
         document.getElementById('fourierReset').addEventListener('click', () => {
+            if (freehandActive) {
+                mode.disableFreehandDraw();
+                freehandBtn.textContent = '✏️ Freehand Draw';
+                freehandBtn.classList.remove('btn-stop');
+                freehandActive = false;
+            }
             mode.reset();
         });
 
@@ -241,14 +271,51 @@ class App {
         }
 
         presetSelect.value = 'heart';
+
+        const customPanel = document.getElementById('customEquationPanel');
+
         presetSelect.addEventListener('change', (e) => {
             mode.loadPreset(e.target.value);
             this.buildParametricSliders();
+            // Show/hide custom equation panel
+            customPanel.style.display = e.target.value === 'custom' ? 'block' : 'none';
         });
 
         // Load initial
         mode.loadPreset('heart');
         this.buildParametricSliders();
+
+        // Custom equation inputs
+        const customXInput = document.getElementById('customXInput');
+        const customYInput = document.getElementById('customYInput');
+
+        customXInput.addEventListener('change', (e) => {
+            const ok = mode.setCustomX(e.target.value);
+            e.target.classList.toggle('error', !ok);
+        });
+
+        customYInput.addEventListener('change', (e) => {
+            const ok = mode.setCustomY(e.target.value);
+            e.target.classList.toggle('error', !ok);
+        });
+
+        // t-range slider
+        const tRangeSlider = document.getElementById('parametricTRange');
+        const tRangeLabel = document.getElementById('tRangeLabel');
+        tRangeSlider.addEventListener('input', (e) => {
+            const val = parseFloat(e.target.value);
+            mode.setTRange(0, val);
+            tRangeLabel.textContent = val.toFixed(2);
+        });
+
+        // Resolution slider
+        const resSlider = document.getElementById('parametricResolution');
+        const resLabel = document.getElementById('resolutionLabel');
+        resSlider.addEventListener('input', (e) => {
+            const val = parseInt(e.target.value);
+            mode.setResolution(val);
+            resLabel.textContent = val;
+        });
 
         // Animation controls
         document.getElementById('parametricPlay').addEventListener('click', () => {
@@ -329,6 +396,32 @@ class App {
             juliaControls.style.display = e.target.value === 'julia' ? 'block' : 'none';
         });
 
+        // Fractal formula dropdown
+        const formulaSelect = document.getElementById('fractalFormula');
+        const formulaDesc = document.getElementById('formulaDescription');
+        formulaSelect.innerHTML = '';
+        for (const [key, formula] of Object.entries(FractalMode.FORMULAS)) {
+            const opt = document.createElement('option');
+            opt.value = key;
+            opt.textContent = formula.name;
+            formulaSelect.appendChild(opt);
+        }
+        formulaSelect.value = mode.formula || 'standard';
+        formulaSelect.addEventListener('change', (e) => {
+            mode.setFormula(e.target.value);
+            const f = FractalMode.FORMULAS[e.target.value];
+            if (f) formulaDesc.textContent = f.description;
+        });
+
+        // Power slider
+        const powerSlider = document.getElementById('fractalPower');
+        const powerLabel = document.getElementById('fractalPowerLabel');
+        powerSlider.addEventListener('input', (e) => {
+            const val = parseInt(e.target.value);
+            mode.setPower(val);
+            powerLabel.textContent = val;
+        });
+
         // Iterations
         const iterSlider = document.getElementById('fractalIterations');
         const iterLabel = document.getElementById('fractalIterLabel');
@@ -336,6 +429,33 @@ class App {
             const val = parseInt(e.target.value);
             mode.setMaxIterations(val);
             iterLabel.textContent = val;
+        });
+
+        // Bailout
+        const bailoutSlider = document.getElementById('fractalBailout');
+        const bailoutLabel = document.getElementById('fractalBailoutLabel');
+        bailoutSlider.addEventListener('input', (e) => {
+            const val = parseInt(e.target.value);
+            mode.setBailout(val);
+            bailoutLabel.textContent = val;
+        });
+
+        // Perturbation (Re)
+        const perturbReSlider = document.getElementById('fractalPerturbRe');
+        const perturbReLabel = document.getElementById('perturbReLabel');
+        perturbReSlider.addEventListener('input', (e) => {
+            const val = parseFloat(e.target.value);
+            perturbReLabel.textContent = val.toFixed(3);
+            mode.setPerturbation(val, parseFloat(document.getElementById('fractalPerturbIm').value));
+        });
+
+        // Perturbation (Im)
+        const perturbImSlider = document.getElementById('fractalPerturbIm');
+        const perturbImLabel = document.getElementById('perturbImLabel');
+        perturbImSlider.addEventListener('input', (e) => {
+            const val = parseFloat(e.target.value);
+            perturbImLabel.textContent = val.toFixed(3);
+            mode.setPerturbation(parseFloat(document.getElementById('fractalPerturbRe').value), val);
         });
 
         // Color scheme

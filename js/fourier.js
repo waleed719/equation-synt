@@ -270,6 +270,125 @@ class FourierMode {
         this.driftAngle = angle;
     }
 
+    // --- Freehand Drawing Mode ---
+    enableFreehandDraw() {
+        this.freehandPoints = [];
+        this.isDrawing = false;
+        this.stop();
+        clearCanvas(this.ctx, this.canvas);
+
+        // Draw instruction text
+        const ctx = this.ctx;
+        ctx.fillStyle = 'rgba(255,255,255,0.3)';
+        ctx.font = '18px "Inter", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('✏️ Draw a shape on the canvas', this.canvas.width / 2, this.canvas.height / 2 - 15);
+        ctx.font = '13px "Inter", sans-serif';
+        ctx.fillText('Release mouse to apply Fourier Transform', this.canvas.width / 2, this.canvas.height / 2 + 15);
+        ctx.textAlign = 'left';
+
+        // Mouse event handlers
+        this._onMouseDown = (e) => {
+            this.isDrawing = true;
+            this.freehandPoints = [];
+            clearCanvas(this.ctx, this.canvas);
+        };
+
+        this._onMouseMove = (e) => {
+            if (!this.isDrawing) return;
+            const rect = this.canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left - this.canvas.width / 2;
+            const y = e.clientY - rect.top - this.canvas.height / 2;
+            this.freehandPoints.push({ x, y });
+
+            // Draw live preview
+            if (this.freehandPoints.length > 1) {
+                const ctx = this.ctx;
+                const pts = this.freehandPoints;
+                ctx.beginPath();
+                ctx.moveTo(pts[pts.length - 2].x + this.canvas.width / 2,
+                    pts[pts.length - 2].y + this.canvas.height / 2);
+                ctx.lineTo(pts[pts.length - 1].x + this.canvas.width / 2,
+                    pts[pts.length - 1].y + this.canvas.height / 2);
+                ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
+        };
+
+        this._onMouseUp = () => {
+            if (!this.isDrawing) return;
+            this.isDrawing = false;
+
+            if (this.freehandPoints.length > 10) {
+                // Resample to uniform spacing
+                const resampled = this._resamplePoints(this.freehandPoints, 200);
+                this.loadCustomPoints(resampled);
+                this.numFrequencies = Math.min(50, this.coefficients.length);
+                this.startAnimation();
+            }
+        };
+
+        this.canvas.addEventListener('mousedown', this._onMouseDown);
+        this.canvas.addEventListener('mousemove', this._onMouseMove);
+        this.canvas.addEventListener('mouseup', this._onMouseUp);
+
+        this._freehandActive = true;
+    }
+
+    disableFreehandDraw() {
+        if (this._freehandActive) {
+            this.canvas.removeEventListener('mousedown', this._onMouseDown);
+            this.canvas.removeEventListener('mousemove', this._onMouseMove);
+            this.canvas.removeEventListener('mouseup', this._onMouseUp);
+            this._freehandActive = false;
+        }
+    }
+
+    _resamplePoints(points, numSamples) {
+        // Calculate total path length
+        let totalLen = 0;
+        for (let i = 1; i < points.length; i++) {
+            const dx = points[i].x - points[i - 1].x;
+            const dy = points[i].y - points[i - 1].y;
+            totalLen += Math.sqrt(dx * dx + dy * dy);
+        }
+
+        const step = totalLen / numSamples;
+        const resampled = [{ ...points[0] }];
+        let dist = 0;
+        let target = step;
+
+        for (let i = 1; i < points.length && resampled.length < numSamples; i++) {
+            const dx = points[i].x - points[i - 1].x;
+            const dy = points[i].y - points[i - 1].y;
+            const segLen = Math.sqrt(dx * dx + dy * dy);
+
+            while (dist + segLen >= target && resampled.length < numSamples) {
+                const frac = (target - dist) / segLen;
+                resampled.push({
+                    x: points[i - 1].x + dx * frac,
+                    y: points[i - 1].y + dy * frac
+                });
+                target += step;
+            }
+            dist += segLen;
+        }
+
+        return resampled;
+    }
+
+    // Set scale multiplier for epicycles
+    setScale(scale) {
+        if (this.coefficients.length === 0) return;
+        // Recompute by scaling existing coefficients
+        for (const c of this.coefficients) {
+            c.amplitude *= scale / (this._lastScale || 1);
+        }
+        this._lastScale = scale;
+        this.render();
+    }
+
     // --- SVG Import ---
     parseSVGPath(svgContent) {
         const parser = new DOMParser();
@@ -314,8 +433,10 @@ class FourierMode {
     }
 
     destroy() {
+        this.disableFreehandDraw();
         this.stop();
         this.coefficients = [];
         this.path = [];
     }
 }
+

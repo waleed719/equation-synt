@@ -69,11 +69,15 @@
                             <div class="control-group">
                                 <select id="fourierPreset" class="select-control"></select>
                             </div>
+                            <div class="control-group" style="margin-top:8px">
+                                <button class="btn btn-accent btn-full" id="fourierFreehandBtn">✏️ Freehand
+                                    Draw</button>
+                                <p class="info-text">Draw any shape with your mouse — it gets Fourier decomposed!</p>
+                            </div>
                             <div class="control-group file-upload">
                                 <button class="btn btn-accent btn-full">📂 Import SVG</button>
                                 <input type="file" id="svgUpload" accept=".svg">
                             </div>
-                            <p class="info-text">Upload any SVG file to reconstruct it using Fourier series</p>
                         </div>
 
                         <div class="divider"></div>
@@ -192,6 +196,46 @@
                             </div>
                         </div>
 
+                        <!-- Custom Equation Input (hidden until 'custom' is selected) -->
+                        <div id="customEquationPanel" style="display:none">
+                            <div class="divider"></div>
+                            <div class="controls-section">
+                                <div class="section-title">Custom Equations</div>
+                                <div class="control-group">
+                                    <label
+                                        style="font-size:11px;color:var(--text-secondary);margin-bottom:4px;display:block">x(t)
+                                        =</label>
+                                    <input type="text" id="customXInput" class="text-input" value="scale * sin(a * t)"
+                                        placeholder="e.g. scale * sin(a * t)">
+                                </div>
+                                <div class="control-group">
+                                    <label
+                                        style="font-size:11px;color:var(--text-secondary);margin-bottom:4px;display:block">y(t)
+                                        =</label>
+                                    <input type="text" id="customYInput" class="text-input" value="scale * cos(b * t)"
+                                        placeholder="e.g. scale * cos(b * t)">
+                                </div>
+                                <p class="info-text">Variables: t, scale, a, b, c, d. Use Math.sin, Math.cos, Math.pow,
+                                    etc.</p>
+                                <div class="control-group" style="margin-top:8px">
+                                    <div class="label-row">
+                                        <label>t Range Max</label>
+                                        <span class="slider-value" id="tRangeLabel">6.28</span>
+                                    </div>
+                                    <input type="range" id="parametricTRange" class="slider" min="1" max="40" step="0.5"
+                                        value="6.28">
+                                </div>
+                                <div class="control-group">
+                                    <div class="label-row">
+                                        <label>Resolution</label>
+                                        <span class="slider-value" id="resolutionLabel">2000</span>
+                                    </div>
+                                    <input type="range" id="parametricResolution" class="slider" min="500" max="10000"
+                                        step="500" value="2000">
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="divider"></div>
 
                         <div class="controls-section">
@@ -239,7 +283,26 @@
                         <div class="divider"></div>
 
                         <div class="controls-section">
-                            <div class="section-title">Parameters</div>
+                            <div class="section-title">Equation Formula</div>
+                            <div class="control-group">
+                                <select id="fractalFormula" class="select-control"></select>
+                            </div>
+                            <p class="info-text" id="formulaDescription">Classic: z → z^n + c</p>
+                        </div>
+
+                        <div class="divider"></div>
+
+                        <div class="controls-section">
+                            <div class="section-title">Equation Parameters</div>
+                            <div class="control-group">
+                                <div class="label-row">
+                                    <label>Power (n)</label>
+                                    <span class="slider-value" id="fractalPowerLabel">2</span>
+                                </div>
+                                <input type="range" id="fractalPower" class="slider" min="2" max="8" step="1" value="2">
+                                <p class="info-text">z^n + c — higher powers create more symmetry</p>
+                            </div>
+
                             <div class="control-group">
                                 <div class="label-row">
                                     <label>Max Iterations</label>
@@ -251,8 +314,36 @@
 
                             <div class="control-group">
                                 <div class="label-row">
-                                    <label>Color Scheme</label>
+                                    <label>Bailout Radius</label>
+                                    <span class="slider-value" id="fractalBailoutLabel">4</span>
                                 </div>
+                                <input type="range" id="fractalBailout" class="slider" min="2" max="100" step="1"
+                                    value="4">
+                            </div>
+
+                            <div class="control-group">
+                                <div class="label-row">
+                                    <label>Perturb (Re)</label>
+                                    <span class="slider-value" id="perturbReLabel">0.000</span>
+                                </div>
+                                <input type="range" id="fractalPerturbRe" class="slider" min="-1" max="1" step="0.001"
+                                    value="0">
+                            </div>
+                            <div class="control-group">
+                                <div class="label-row">
+                                    <label>Perturb (Im)</label>
+                                    <span class="slider-value" id="perturbImLabel">0.000</span>
+                                </div>
+                                <input type="range" id="fractalPerturbIm" class="slider" min="-1" max="1" step="0.001"
+                                    value="0">
+                            </div>
+                        </div>
+
+                        <div class="divider"></div>
+
+                        <div class="controls-section">
+                            <div class="section-title">Color Scheme</div>
+                            <div class="control-group">
                                 <select id="fractalColorScheme" class="select-control">
                                     <option value="fire">🔥 Fire</option>
                                     <option value="ocean">🌊 Ocean</option>
@@ -287,7 +378,7 @@
                                         value="0.27015">
                                 </div>
                                 <div class="formula-display">
-                                    z → z² + c<br>
+                                    z → z<sup>n</sup> + c<br>
                                     c = <span id="juliaFormulaC">-0.700 + 0.270i</span>
                                 </div>
                             </div>
@@ -304,8 +395,8 @@
                         <div class="divider"></div>
 
                         <div class="formula-display">
-                            z<sub>n+1</sub> = z<sub>n</sub>² + c<br>
-                            |z| > 2 → escapes
+                            z<sub>n+1</sub> = z<sub>n</sub><sup>n</sup> + c<br>
+                            |z| > bailout → escapes
                         </div>
                     </div>
 

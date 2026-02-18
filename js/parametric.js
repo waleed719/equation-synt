@@ -203,6 +203,33 @@ class ParametricMode {
                 { key: 'n', label: 'String Count', min: 2, max: 20, step: 1 },
                 { key: 'scale', label: 'Scale', min: 30, max: 180, step: 5 }
             ]
+        },
+
+        // --- Custom User Equation ---
+        custom: {
+            name: '✏️ Custom Equation',
+            category: 'Custom',
+            x: (t, p) => {
+                try { return p._xFn(t, p); } catch { return 0; }
+            },
+            y: (t, p) => {
+                try { return p._yFn(t, p); } catch { return 0; }
+            },
+            defaultParams: {
+                scale: 100, a: 1, b: 1, c: 1, d: 1,
+                _xExpr: 'scale * Math.sin(a * t)',
+                _yExpr: 'scale * Math.cos(b * t)',
+                _xFn: (t, p) => p.scale * Math.sin(p.a * t),
+                _yFn: (t, p) => p.scale * Math.cos(p.b * t)
+            },
+            tRange: [0, 2 * Math.PI],
+            sliders: [
+                { key: 'scale', label: 'Scale', min: 10, max: 200, step: 5 },
+                { key: 'a', label: 'Param a', min: 0.1, max: 20, step: 0.1 },
+                { key: 'b', label: 'Param b', min: 0.1, max: 20, step: 0.1 },
+                { key: 'c', label: 'Param c', min: 0.1, max: 20, step: 0.1 },
+                { key: 'd', label: 'Param d', min: 0.1, max: 20, step: 0.1 }
+            ]
         }
     };
 
@@ -215,6 +242,52 @@ class ParametricMode {
         this.tRange = [...preset.tRange];
         this.drawProgress = 0;
         this.trailPoints = [];
+        this.drawInstant();
+    }
+
+    // Set custom x(t) equation string
+    setCustomX(exprStr) {
+        try {
+            // Build function: t, scale, a, b, c, d are available
+            const fn = new Function('t', 'p',
+                `with(Math) { const {scale,a,b,c,d} = p; return ${exprStr}; }`
+            );
+            // Test it
+            fn(0, this.params);
+            this.params._xExpr = exprStr;
+            this.params._xFn = fn;
+            this.drawInstant();
+            return true;
+        } catch (e) {
+            return false;
+        }
+    }
+
+    // Set custom y(t) equation string
+    setCustomY(exprStr) {
+        try {
+            const fn = new Function('t', 'p',
+                `with(Math) { const {scale,a,b,c,d} = p; return ${exprStr}; }`
+            );
+            fn(0, this.params);
+            this.params._yExpr = exprStr;
+            this.params._yFn = fn;
+            this.drawInstant();
+            return true;
+        } catch (e) {
+            return false;
+        }
+    }
+
+    // Set t-range
+    setTRange(min, max) {
+        this.tRange = [min, max];
+        this.drawInstant();
+    }
+
+    // Set resolution
+    setResolution(n) {
+        this.resolution = n;
         this.drawInstant();
     }
 
