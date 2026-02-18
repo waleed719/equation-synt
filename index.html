@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="An Interactive Mathematical Visualization System for Image Synthesis Using Fourier, Parametric, Fractal and Noise Methods">
+    <title>Equation-Based Image Synthesizer</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <div class="app-layout">
+
+        <!-- ===== LEFT SIDEBAR ===== -->
+        <nav class="sidebar">
+            <div class="sidebar-logo">∑</div>
+            <div class="nav-items">
+                <div class="nav-item active" data-mode="fourier">
+                    🌀
+                    <span class="tooltip">Fourier Drawing</span>
+                </div>
+                <div class="nav-item" data-mode="parametric">
+                    📐
+                    <span class="tooltip">Parametric Art</span>
+                </div>
+                <div class="nav-item" data-mode="fractal">
+                    🔬
+                    <span class="tooltip">Fractal Explorer</span>
+                </div>
+                <div class="nav-item" data-mode="noise">
+                    🏔️
+                    <span class="tooltip">Noise Landscapes</span>
+                </div>
+            </div>
+        </nav>
+
+        <!-- ===== MAIN CONTENT ===== -->
+        <div class="main-content">
+
+            <!-- Header -->
+            <header class="header">
+                <div class="header-left">
+                    <span class="header-title">EQ•SYNTH</span>
+                    <span class="mode-title" id="modeTitle">Fourier Drawing</span>
+                </div>
+                <div class="header-actions">
+                    <button class="header-btn" id="fullscreenBtn">⛶ Fullscreen</button>
+                    <button class="header-btn primary" id="exportBtn">📥 Export PNG</button>
+                </div>
+            </header>
+
+            <!-- Canvas + Controls -->
+            <div class="canvas-area">
+
+                <!-- Canvas -->
+                <div id="canvasContainer">
+                    <canvas id="mainCanvas"></canvas>
+                </div>
+
+                <!-- Right Controls Sidebar -->
+                <aside class="controls-sidebar">
+
+                    <!-- ========== FOURIER CONTROLS ========== -->
+                    <div class="controls-panel active" id="fourierControls">
+                        <div class="controls-section">
+                            <div class="section-title">Shape Preset</div>
+                            <div class="control-group">
+                                <select id="fourierPreset" class="select-control"></select>
+                            </div>
+                            <div class="control-group file-upload">
+                                <button class="btn btn-accent btn-full">📂 Import SVG</button>
+                                <input type="file" id="svgUpload" accept=".svg">
+                            </div>
+                            <p class="info-text">Upload any SVG file to reconstruct it using Fourier series</p>
+                        </div>
+
+                        <div class="divider"></div>
+
+                        <div class="controls-section">
+                            <div class="section-title">Fourier Parameters</div>
+                            <div class="control-group">
+                                <div class="label-row">
+                                    <label>Frequencies</label>
+                                    <span class="slider-value" id="fourierFreqLabel">50</span>
+                                </div>
+                                <input type="range" id="fourierFrequencies" class="slider" min="1" max="200" value="50">
+                                <p class="info-text">More frequencies = more detail in reconstruction</p>
+                            </div>
+
+                            <div class="control-group">
+                                <div class="label-row">
+                                    <label>Animation Speed</label>
+                                </div>
+                                <input type="range" id="fourierSpeed" class="slider" min="0.1" max="5" step="0.1"
+                                    value="1">
+                            </div>
+
+                            <div class="control-group">
+                                <div class="label-row">
+                                    <label>Stroke Width</label>
+                                </div>
+                                <input type="range" id="fourierStroke" class="slider" min="0.5" max="5" step="0.5"
+                                    value="2">
+                            </div>
+                        </div>
+
+                        <div class="divider"></div>
+
+                        <div class="controls-section">
+                            <div class="section-title">Appearance</div>
+                            <div class="control-group color-picker-wrapper">
+                                <label style="font-size:12px;color:var(--text-secondary)">Trail Color</label>
+                                <input type="color" id="fourierColor" value="#00f5ff">
+                            </div>
+
+                            <div class="control-group" style="margin-top:12px">
+                                <label class="toggle-control">
+                                    <input type="checkbox" id="fourierEpicycles" checked>
+                                    <span class="toggle-label">Show Epicycles</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="divider"></div>
+
+                        <div class="controls-section">
+                            <div class="section-title">Revolution Drift</div>
+                            <div class="control-group">
+                                <label class="toggle-control">
+                                    <input type="checkbox" id="fourierDriftEnabled">
+                                    <span class="toggle-label">Enable Drift</span>
+                                </label>
+                                <p class="info-text">Each revolution offsets slightly — like π never completing a
+                                    perfect circle. Creates layered spirograph patterns.</p>
+                            </div>
+                            <div id="driftControls" style="opacity:0.4; pointer-events:none; transition: all 0.3s ease">
+                                <div class="control-group">
+                                    <div class="label-row">
+                                        <label>Drift Amount</label>
+                                        <span class="slider-value" id="driftAmountLabel">2.0</span>
+                                    </div>
+                                    <input type="range" id="fourierDriftAmount" class="slider" min="0.5" max="10"
+                                        step="0.5" value="2">
+                                </div>
+                                <div class="control-group">
+                                    <div class="label-row">
+                                        <label>Drift Angle</label>
+                                        <span class="slider-value" id="driftAngleLabel">0.05</span>
+                                    </div>
+                                    <input type="range" id="fourierDriftAngle" class="slider" min="0.01" max="0.5"
+                                        step="0.01" value="0.05">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="divider"></div>
+
+                        <div class="controls-section">
+                            <div class="section-title">Playback</div>
+                            <div class="btn-group">
+                                <button class="btn btn-play" id="fourierPlay">▶ Play</button>
+                                <button class="btn btn-stop" id="fourierPause">⏸ Pause</button>
+                                <button class="btn btn-reset" id="fourierReset">↺ Reset</button>
+                            </div>
+                        </div>
+
+                        <div class="divider"></div>
+
+                        <div class="formula-display">
+                            f(t) = Σ cₙ · e<sup>int</sup><br>
+                            cₙ = (1/N) Σ f(tₖ) · e<sup>-2πi·n·k/N</sup>
+                        </div>
+                    </div>
+
+                    <!-- ========== PARAMETRIC CONTROLS ========== -->
+                    <div class="controls-panel" id="parametricControls">
+                        <div class="controls-section">
+                            <div class="section-title">Equation Preset</div>
+                            <div class="control-group">
+                                <select id="parametricPreset" class="select-control"></select>
+                            </div>
+                        </div>
+
+                        <div class="divider"></div>
+
+                        <div class="controls-section">
+                            <div class="section-title">Parameters</div>
+                            <div id="parametricSliders">
+                                <!-- Dynamically generated sliders appear here -->
+                            </div>
+                        </div>
+
+                        <div class="divider"></div>
+
+                        <div class="controls-section">
+                            <div class="section-title">Drawing</div>
+                            <div class="control-group">
+                                <div class="label-row">
+                                    <label>Stroke Width</label>
+                                </div>
+                                <input type="range" id="parametricStroke" class="slider" min="0.5" max="5" step="0.5"
+                                    value="2">
+                            </div>
+                            <div class="control-group">
+                                <div class="label-row">
+                                    <label>Animation Speed</label>
+                                </div>
+                                <input type="range" id="parametricSpeed" class="slider" min="0.1" max="5" step="0.1"
+                                    value="1">
+                            </div>
+                        </div>
+
+                        <div class="divider"></div>
+
+                        <div class="controls-section">
+                            <div class="section-title">Playback</div>
+                            <div class="btn-group">
+                                <button class="btn btn-play" id="parametricPlay">▶ Animate</button>
+                                <button class="btn btn-stop" id="parametricPause">⏸ Pause</button>
+                                <button class="btn btn-reset" id="parametricReset">↺ Reset</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ========== FRACTAL CONTROLS ========== -->
+                    <div class="controls-panel" id="fractalControls">
+                        <div class="controls-section">
+                            <div class="section-title">Fractal Type</div>
+                            <div class="control-group">
+                                <select id="fractalType" class="select-control">
+                                    <option value="mandelbrot">Mandelbrot Set</option>
+                                    <option value="julia">Julia Set</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="divider"></div>
+
+                        <div class="controls-section">
+                            <div class="section-title">Parameters</div>
+                            <div class="control-group">
+                                <div class="label-row">
+                                    <label>Max Iterations</label>
+                                    <span class="slider-value" id="fractalIterLabel">200</span>
+                                </div>
+                                <input type="range" id="fractalIterations" class="slider" min="50" max="2000" step="50"
+                                    value="200">
+                            </div>
+
+                            <div class="control-group">
+                                <div class="label-row">
+                                    <label>Color Scheme</label>
+                                </div>
+                                <select id="fractalColorScheme" class="select-control">
+                                    <option value="fire">🔥 Fire</option>
+                                    <option value="ocean">🌊 Ocean</option>
+                                    <option value="neon">💜 Neon</option>
+                                    <option value="electric">⚡ Electric</option>
+                                    <option value="sunset">🌅 Sunset</option>
+                                    <option value="cosmic">🌌 Cosmic</option>
+                                    <option value="monochrome">⬜ Monochrome</option>
+                                    <option value="matrix">💚 Matrix</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div id="juliaControls">
+                            <div class="divider"></div>
+                            <div class="controls-section">
+                                <div class="section-title">Julia Constant (c)</div>
+                                <div class="control-group">
+                                    <div class="label-row">
+                                        <label>Real Part</label>
+                                        <span class="slider-value" id="juliaReLabel">-0.700</span>
+                                    </div>
+                                    <input type="range" id="juliaRe" class="slider" min="-2" max="2" step="0.001"
+                                        value="-0.7">
+                                </div>
+                                <div class="control-group">
+                                    <div class="label-row">
+                                        <label>Imaginary Part</label>
+                                        <span class="slider-value" id="juliaImLabel">0.270</span>
+                                    </div>
+                                    <input type="range" id="juliaIm" class="slider" min="-2" max="2" step="0.001"
+                                        value="0.27015">
+                                </div>
+                                <div class="formula-display">
+                                    z → z² + c<br>
+                                    c = <span id="juliaFormulaC">-0.700 + 0.270i</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="divider"></div>
+
+                        <div class="controls-section">
+                            <div class="section-title">Navigation</div>
+                            <button class="btn btn-reset btn-full" id="fractalReset">↺ Reset View</button>
+                            <p class="info-text" style="margin-top:8px">Scroll to zoom · Drag to pan</p>
+                        </div>
+
+                        <div class="divider"></div>
+
+                        <div class="formula-display">
+                            z<sub>n+1</sub> = z<sub>n</sub>² + c<br>
+                            |z| > 2 → escapes
+                        </div>
+                    </div>
+
+                    <!-- ========== NOISE CONTROLS ========== -->
+                    <div class="controls-panel" id="noiseControls">
+                        <div class="controls-section">
+                            <div class="section-title">Scene</div>
+                            <div class="control-group">
+                                <select id="noiseScene" class="select-control">
+                                    <option value="mountains">🏔️ Mountains</option>
+                                    <option value="ocean">🌊 Ocean</option>
+                                    <option value="clouds">☁️ Clouds</option>
+                                    <option value="alien">👽 Alien Planet</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="divider"></div>
+
+                        <div class="controls-section">
+                            <div class="section-title">Noise Parameters</div>
+                            <div class="control-group">
+                                <div class="label-row">
+                                    <label>Octaves</label>
+                                    <span class="slider-value" id="noiseOctavesLabel">6</span>
+                                </div>
+                                <input type="range" id="noiseOctaves" class="slider" min="1" max="8" step="1" value="6">
+                            </div>
+
+                            <div class="control-group">
+                                <div class="label-row">
+                                    <label>Frequency</label>
+                                    <span class="slider-value" id="noiseFreqLabel">0.010</span>
+                                </div>
+                                <input type="range" id="noiseFrequency" class="slider" min="0.001" max="0.05"
+                                    step="0.001" value="0.01">
+                            </div>
+
+                            <div class="control-group">
+                                <div class="label-row">
+                                    <label>Persistence</label>
+                                    <span class="slider-value" id="noisePersLabel">0.50</span>
+                                </div>
+                                <input type="range" id="noisePersistence" class="slider" min="0.1" max="0.9" step="0.05"
+                                    value="0.5">
+                            </div>
+
+                            <div class="control-group">
+                                <div class="label-row">
+                                    <label>Lacunarity</label>
+                                    <span class="slider-value" id="noiseLacLabel">2.0</span>
+                                </div>
+                                <input type="range" id="noiseLacunarity" class="slider" min="1" max="4" step="0.1"
+                                    value="2">
+                            </div>
+                        </div>
+
+                        <div class="divider"></div>
+
+                        <div class="controls-section">
+                            <div class="section-title">Theme & Speed</div>
+                            <div class="control-group">
+                                <select id="noiseColorTheme" class="select-control"></select>
+                            </div>
+                            <div class="control-group" style="margin-top:10px">
+                                <div class="label-row">
+                                    <label>Animation Speed</label>
+                                </div>
+                                <input type="range" id="noiseSpeed" class="slider" min="0.1" max="5" step="0.1"
+                                    value="1">
+                            </div>
+                        </div>
+
+                        <div class="divider"></div>
+
+                        <div class="controls-section">
+                            <div class="section-title">Actions</div>
+                            <div class="btn-group">
+                                <button class="btn btn-play" id="noisePlay">▶ Animate</button>
+                                <button class="btn btn-stop" id="noisePause">⏸ Pause</button>
+                                <button class="btn btn-reset" id="noiseReset">↺ Reset</button>
+                            </div>
+                            <button class="btn btn-accent btn-full" id="noiseSeed" style="margin-top:8px">🎲 Randomize
+                                Seed</button>
+                        </div>
+
+                        <div class="divider"></div>
+
+                        <div class="formula-display">
+                            noise(x) = Σ aⁱ · perlin(fⁱ · x)<br>
+                            f = frequency · lacunarity<sup>i</sup><br>
+                            a = amplitude · persistence<sup>i</sup>
+                        </div>
+                    </div>
+
+                </aside>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts (order matters) -->
+    <script src="js/utils.js"></script>
+    <script src="presets/shapes.js"></script>
+    <script src="js/fourier.js"></script>
+    <script src="js/parametric.js"></script>
+    <script src="js/fractal.js"></script>
+    <script src="js/noise.js"></script>
+    <script src="js/app.js"></script>
+</body>
+
+</html>
