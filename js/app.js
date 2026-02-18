@@ -603,6 +603,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // Mode navigation
     document.querySelectorAll('.nav-item').forEach(item => {
         item.addEventListener('click', () => {
+            // Close mobile controls panel on mode switch
+            const sidebar = document.querySelector('.controls-sidebar');
+            const toggleBtn = document.getElementById('mobileControlsToggle');
+            sidebar.classList.remove('open');
+            toggleBtn.classList.remove('active');
+            toggleBtn.textContent = '⚙️';
+
             app.switchMode(item.dataset.mode);
         });
     });
@@ -616,4 +623,30 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('fullscreenBtn').addEventListener('click', () => {
         app.toggleFullscreen();
     });
+
+    // --- Mobile Controls Toggle ---
+    const mobileToggle = document.getElementById('mobileControlsToggle');
+    const controlsSidebar = document.querySelector('.controls-sidebar');
+
+    mobileToggle.addEventListener('click', () => {
+        const isOpen = controlsSidebar.classList.toggle('open');
+        mobileToggle.classList.toggle('active', isOpen);
+        mobileToggle.textContent = isOpen ? '✕' : '⚙️';
+    });
+
+    // Swipe-down to dismiss controls panel on mobile
+    let touchStartY = 0;
+    controlsSidebar.addEventListener('touchstart', (e) => {
+        touchStartY = e.touches[0].clientY;
+    }, { passive: true });
+
+    controlsSidebar.addEventListener('touchmove', (e) => {
+        const deltaY = e.touches[0].clientY - touchStartY;
+        if (deltaY > 60) {
+            controlsSidebar.classList.remove('open');
+            mobileToggle.classList.remove('active');
+            mobileToggle.textContent = '⚙️';
+        }
+    }, { passive: true });
 });
+
